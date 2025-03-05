@@ -12,24 +12,26 @@ The project uses a `.env` file to manage configuration settings. Below is an exa
 # Path to the ISC DHCP configuration file
 DHCP_CONF_PATH=/etc/dhcp/dhcpd.conf
 
+# Path to the ISC DHCP interfaces configuration file
+INTERFACES_CONF_PATH=/etc/default/isc-dhcp-server
+
 # Secret token for API authentication
 TOKEN_SECRET=your-secret-token
 
-# Path to the interfaces configuration file
-# By default, the interface configuration is located at /etc/default/isc-dhcp-server
-INTERFACES_CONF_PATH=/etc/default/isc-dhcp-server
+# Optional: DHCP service name (if needed for service reloads)
+DHCP_SERVICE_NAME=isc-dhcp-server
 ```
 
 ### Explanation
 
 - **DHCP_CONF_PATH:**  
-  The file path to your ISC DHCP configuration file. The default is `/etc/dhcp/dhcpd.conf`, which is used by the ISC DHCP server to specify on which hosts it should listen.
+  The file path to your ISC DHCP configuration file.
 
 - **TOKEN_SECRET:**  
   A secret token used to secure all API endpoints. Ensure you choose a strong token.
 
 - **INTERFACES_CONF_PATH:**  
-  The file path for the network interfaces configuration. The default is `/etc/default/isc-dhcp-server`, which is used by the ISC DHCP server to specify on which interfaces it should listen.
+  The file path for the network interfaces configuration.
 
 ## Updating Configuration
 

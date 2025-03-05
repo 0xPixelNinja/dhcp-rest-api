@@ -1,6 +1,6 @@
 # DHCP REST API
 
-Welcome to the DHCP REST API project! This project provides a RESTful interface for managing ISC DHCP server configurations, allowing you to easily create, update, delete, and list DHCP hosts and network interfaces.
+This project provides a RESTful API interface for managing ISC DHCP server configurations, allowing you to easily create, update, delete, and list DHCP hosts and network interfaces.
 
 ## Quick Links
 
@@ -15,6 +15,4 @@ This project is built with Python and FastAPI. It secures endpoints with token-b
 - **DHCP Configuration:** Typically located at `/etc/dhcp/dhcpd.conf`.
 - **Interface Configuration:** By default, this is located at `/etc/default/isc-dhcp-server`.
 
-Whether you’re managing DHCP on Proxmox or another environment, this API is designed to streamline your workflow.
-
-Thank you for checking out the project—enjoy managing your DHCP configurations with ease!
+I made this project, for automating the DHCP configurations remotely via API, without accessing the PVE shell
