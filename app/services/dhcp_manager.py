@@ -3,6 +3,7 @@ import os
 import re
 from typing import List, Dict
 from dotenv import load_dotenv
+from app.routers.hosts import Host
 
 load_dotenv()
 
@@ -53,4 +54,44 @@ host {host.name} {{
         return True
     except Exception as e:
         print(f"Error writing to file: {e}")
+        return False
+
+def update_host(name: str, host: Host) -> bool:
+    try:
+        with open(DHCP_CONF_PATH, "r") as f:
+            content = f.read()
+        new_host_block = f"""
+host {host.name} {{
+    hardware ethernet {host.hardware_ethernet};
+    option routers {host.option_routers};
+    option subnet-mask {host.option_subnet_mask};
+    fixed-address {host.fixed_address};
+    option domain-name-servers {host.option_domain_name_servers};
+}}
+"""
+        # Pattern to match the host block for the given name
+        pattern = rf'host\s+{name}\s*{{[^}}]+}}'
+        if not re.search(pattern, content, re.MULTILINE):
+            return False
+        new_content = re.sub(pattern, new_host_block, content, flags=re.MULTILINE)
+        with open(DHCP_CONF_PATH, "w") as f:
+            f.write(new_content)
+        return True
+    except Exception as e:
+        print(f"Error updating host: {e}")
+        return False
+
+def delete_host(name: str) -> bool:
+    try:
+        with open(DHCP_CONF_PATH, "r") as f:
+            content = f.read()
+        pattern = rf'\s*host\s+{name}\s*{{[^}}]+}}\s*'
+        if not re.search(pattern, content, re.MULTILINE):
+            return False
+        new_content = re.sub(pattern, '', content, flags=re.MULTILINE)
+        with open(DHCP_CONF_PATH, "w") as f:
+            f.write(new_content)
+        return True
+    except Exception as e:
+        print(f"Error deleting host: {e}")
         return False
