@@ -3,7 +3,7 @@ import os
 import re
 from typing import List, Dict
 from dotenv import load_dotenv
-from app.routers.hosts import Host
+from models.host_models import Host
 
 load_dotenv()
 
