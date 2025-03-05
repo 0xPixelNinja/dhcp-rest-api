@@ -171,3 +171,4 @@ cython_debug/
 .pypirc
 dhcp.conf
 interfaces.conf
+CHANGELOG.md
