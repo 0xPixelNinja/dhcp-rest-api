@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/0xPixelNinja/dhcp-rest-api/auth"
@@ -12,23 +11,17 @@ import (
 )
 
 func main() {
-	// Load application configuration
+	// Load configuration
 	config.LoadConfig()
 
-	// Set Gin mode (e.g., release, debug, test)
-	// Default is debug mode. For production, set to release mode.
-	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
+	// Create Gin router
+	r := gin.Default()
 
-	// Initialize Gin router
-	router := gin.Default()
+	// Public health check endpoint (no authentication required)
+	r.GET("/health", handlers.HealthCheck)
 
-	// Simple health check endpoint
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "UP"})
-	})
-
-	// Apply authentication middleware to protected route groups
-	authedRoutes := router.Group("/") // Apply to root or specific groups as needed
+	// Apply authentication middleware to all protected routes
+	authedRoutes := r.Group("/")
 	authedRoutes.Use(auth.AuthMiddleware())
 
 	// Host routes
@@ -48,13 +41,16 @@ func main() {
 		interfaceRoutes.DELETE("/", handlers.DeleteInterface) // Body contains type and interface
 	}
 
+	// Token management route
+	authedRoutes.PUT("/token", handlers.UpdateToken)
+
 	// Start server
 	port := os.Getenv("PORT") // Allow port to be set from environment
 	if port == "" {
 		port = "8080" // Default port if not specified
 	}
 	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
