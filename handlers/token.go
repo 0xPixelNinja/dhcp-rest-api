@@ -8,13 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TokenUpdateRequest represents the request payload for token updates
 type TokenUpdateRequest struct {
 	Token string `json:"token" binding:"required"`
 }
 
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
+// GetToken returns the current authentication token (requires auth)
+func GetToken(c *gin.Context) {
+	c.JSON(http.StatusOK, TokenResponse{
+		Token: config.AppConfig.TokenSecret,
+	})
+}
+
 // UpdateToken allows updating the authentication token
-// This endpoint uses the current token for authentication
 func UpdateToken(c *gin.Context) {
 	var req TokenUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -22,13 +31,11 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 
-	// Validate token is not empty
 	if req.Token == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Token cannot be empty"})
 		return
 	}
 
-	// Save the new token
 	if err := config.SaveToken(req.Token); err != nil {
 		log.Printf("Error saving new token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save token"})

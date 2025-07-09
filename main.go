@@ -11,43 +11,33 @@ import (
 )
 
 func main() {
-	// Load configuration
 	config.LoadConfig()
 
-	// Set Gin to release mode for production
+	// Use production mode - no debug output
 	gin.SetMode(gin.ReleaseMode)
 
-	// Create Gin router with production settings
 	r := gin.New()
 
-	// Add recovery middleware to handle panics gracefully
+	// Basic middleware stack
 	r.Use(gin.Recovery())
-
-	// Add custom logging middleware for production
 	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{
-		SkipPaths: []string{"/health"}, // Skip logging health check requests to reduce noise
+		SkipPaths: []string{"/health"}, // health checks spam the logs
 	}))
-
-	// Add security headers middleware
 	r.Use(middleware.SecurityHeaders())
-
-	// Add CORS middleware
 	r.Use(middleware.CORS())
 
-	// Create rate limiter
+	// Rate limiting for all endpoints
 	rateLimiter := middleware.DefaultRateLimiter()
-
-	// Apply rate limiting to all routes
 	r.Use(rateLimiter.Middleware())
 
-	// Public health check endpoint (with rate limiting but no authentication)
+	// Public endpoint - no auth needed
 	r.GET("/health", handlers.HealthCheck)
 
-	// Apply authentication middleware to all protected routes
+	// Everything else requires authentication
 	authedRoutes := r.Group("/")
 	authedRoutes.Use(auth.AuthMiddleware())
 
-	// Host routes
+	// DHCP host management
 	hostRoutes := authedRoutes.Group("/hosts")
 	{
 		hostRoutes.GET("/", handlers.ListHosts)
@@ -56,18 +46,18 @@ func main() {
 		hostRoutes.DELETE("/:name", handlers.DeleteHost)
 	}
 
-	// Interface routes
+	// Network interface management
 	interfaceRoutes := authedRoutes.Group("/interfaces")
 	{
 		interfaceRoutes.GET("/", handlers.ListInterfaces)
-		interfaceRoutes.POST("/", handlers.AddInterface)      // Body contains type and interface
-		interfaceRoutes.DELETE("/", handlers.DeleteInterface) // Body contains type and interface
+		interfaceRoutes.POST("/", handlers.AddInterface)
+		interfaceRoutes.DELETE("/", handlers.DeleteInterface)
 	}
 
-	// Token management route
-	authedRoutes.PUT("/token", handlers.UpdateToken)
+	// Token management
+	// authedRoutes.GET("/token", handlers.GetToken)
+	// authedRoutes.PUT("/token", handlers.UpdateToken)
 
-	// Start server
 	log.Printf("Starting DHCP REST API server on port %s", config.AppConfig.Port)
 	if err := r.Run(":" + config.AppConfig.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

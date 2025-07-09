@@ -1,7 +1,6 @@
 package models
 
-// Host represents the data structure for a DHCP host entry.
-// Corresponds to the Host Pydantic model in the Python application.
+// Host represents a DHCP host entry
 type Host struct {
 	Name                    string `json:"name" binding:"required"`
 	HardwareEthernet        string `json:"hardware_ethernet" binding:"required"`
@@ -11,9 +10,8 @@ type Host struct {
 	OptionDomainNameServers string `json:"option_domain_name_servers" binding:"required"`
 }
 
-// HostUpdate represents the data structure for updating a DHCP host entry.
-// Fields are optional, as in the HostUpdate Pydantic model.
-// We use pointers to strings to distinguish between an empty string and a field not provided.
+// HostUpdate contains optional fields for updating a host
+// Using pointers to distinguish between empty string and not provided
 type HostUpdate struct {
 	Name                    *string `json:"name,omitempty"`
 	HardwareEthernet        *string `json:"hardware_ethernet,omitempty"`
@@ -23,9 +21,8 @@ type HostUpdate struct {
 	OptionDomainNameServers *string `json:"option_domain_name_servers,omitempty"`
 }
 
-// InterfaceOperation represents the data structure for adding or deleting an interface.
-// Corresponds to the InterfaceOperation Pydantic model in the Python application.
+// InterfaceOperation is used for adding or deleting network interfaces
 type InterfaceOperation struct {
-	Type      string `json:"type" binding:"required,oneof=v4 v6"` // "v4" or "v6"
+	Type      string `json:"type" binding:"required,oneof=v4 v6"`
 	Interface string `json:"interface" binding:"required"`
 }

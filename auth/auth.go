@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/0xPixelNinja/dhcp-rest-api/config" // Adjusted import path
+	"github.com/0xPixelNinja/dhcp-rest-api/config"
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware creates a middleware handler for token authentication.
+// AuthMiddleware checks for valid Bearer token in Authorization header
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

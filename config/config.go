@@ -1,7 +1,8 @@
 package config
 
 import (
-	"io/ioutil"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,7 +11,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds the application configuration
 type Config struct {
 	DhcpConfPath       string
 	InterfacesConfPath string
@@ -20,13 +20,10 @@ type Config struct {
 	Port               string
 }
 
-// AppConfig is the global configuration instance
 var AppConfig Config
 
-// LoadConfig loads configuration from environment variables
-// It looks for a .env file first, then environment variables.
 func LoadConfig() {
-	// Only load .env file in development mode
+	// Only load .env file in development
 	env := getEnv("ENVIRONMENT", "development")
 	if env == "development" {
 		_ = godotenv.Load()
@@ -38,23 +35,39 @@ func LoadConfig() {
 	AppConfig.TokenFilePath = getEnv("TOKEN_FILE_PATH", "/etc/dhcp-rest-api/token")
 	AppConfig.Port = getEnv("PORT", "8080")
 
-	// Load token from file if exists, otherwise use env var
+	// Try to load token from file first, then environment, then auto-generate
 	if tokenFromFile := loadTokenFromFile(); tokenFromFile != "" {
 		AppConfig.TokenSecret = tokenFromFile
 		if AppConfig.Environment == "development" {
 			log.Println("Token loaded from file")
 		}
-	} else {
-		AppConfig.TokenSecret = getEnv("TOKEN_SECRET", "")
-		if AppConfig.TokenSecret == "" {
-			log.Fatal("TOKEN_SECRET must be set in production")
-		}
+	} else if envToken := getEnv("TOKEN_SECRET", ""); envToken != "" {
+		AppConfig.TokenSecret = envToken
 		if AppConfig.Environment == "development" {
 			log.Println("Token loaded from environment variable")
 		}
+	} else {
+		// Auto-generate a secure token for first-time setup
+		generatedToken, err := generateSecureToken()
+		if err != nil {
+			log.Fatalf("Failed to generate secure token: %v", err)
+		}
+
+		AppConfig.TokenSecret = generatedToken
+
+		// Save the generated token to file
+		if err := SaveToken(generatedToken); err != nil {
+			log.Printf("Warning: Failed to save auto-generated token to file: %v", err)
+			log.Printf("Auto-generated token (save this!): %s", generatedToken)
+		} else {
+			log.Printf("Auto-generated secure token and saved to: %s", AppConfig.TokenFilePath)
+			log.Printf("Your API token: %s", generatedToken)
+		}
+
+		log.Println("IMPORTANT: Save this token! You'll need it to access the API.")
+		log.Println("You can also retrieve it later from the token file or change it via the API.")
 	}
 
-	// Validate required configuration in production
 	if AppConfig.Environment == "production" {
 		validateProductionConfig()
 	}
@@ -69,13 +82,12 @@ func LoadConfig() {
 	}
 }
 
-// validateProductionConfig ensures all required settings are present in production
 func validateProductionConfig() {
 	if AppConfig.TokenSecret == "" {
 		log.Fatal("TOKEN_SECRET is required in production")
 	}
 
-	// Check if config paths exist and are accessible
+	// Check if config files exist
 	if _, err := os.Stat(AppConfig.DhcpConfPath); os.IsNotExist(err) {
 		log.Printf("Warning: DHCP config path does not exist: %s", AppConfig.DhcpConfPath)
 	}
@@ -87,12 +99,19 @@ func validateProductionConfig() {
 	log.Printf("Production configuration validated successfully")
 }
 
-// IsProduction returns true if running in production mode
+// generateSecureToken creates a cryptographically secure random token
+func generateSecureToken() (string, error) {
+	bytes := make([]byte, 32) // 32 bytes = 256 bits
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
 func IsProduction() bool {
 	return AppConfig.Environment == "production"
 }
 
-// getEnv retrieves an environment variable or returns a default value
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
@@ -100,26 +119,21 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// loadTokenFromFile loads the authentication token from file
 func loadTokenFromFile() string {
-	if content, err := ioutil.ReadFile(AppConfig.TokenFilePath); err == nil {
+	if content, err := os.ReadFile(AppConfig.TokenFilePath); err == nil {
 		return strings.TrimSpace(string(content))
 	}
 	return ""
 }
 
-// SaveToken saves a new authentication token to file and updates in-memory config
 func SaveToken(token string) error {
-	// Create directory if it doesn't exist
 	dir := filepath.Dir(AppConfig.TokenFilePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	// Write token to file with restricted permissions
-	err := ioutil.WriteFile(AppConfig.TokenFilePath, []byte(token), 0600)
+	err := os.WriteFile(AppConfig.TokenFilePath, []byte(token), 0600)
 	if err == nil {
-		// Update in-memory configuration
 		AppConfig.TokenSecret = token
 		if !IsProduction() {
 			log.Println("Token updated successfully")
