@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/0xPixelNinja/dhcp-rest-api/auth"
 	"github.com/0xPixelNinja/dhcp-rest-api/config"
 	"github.com/0xPixelNinja/dhcp-rest-api/handlers"
+	"github.com/0xPixelNinja/dhcp-rest-api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,10 +14,33 @@ func main() {
 	// Load configuration
 	config.LoadConfig()
 
-	// Create Gin router
-	r := gin.Default()
+	// Set Gin to release mode for production
+	gin.SetMode(gin.ReleaseMode)
 
-	// Public health check endpoint (no authentication required)
+	// Create Gin router with production settings
+	r := gin.New()
+
+	// Add recovery middleware to handle panics gracefully
+	r.Use(gin.Recovery())
+
+	// Add custom logging middleware for production
+	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		SkipPaths: []string{"/health"}, // Skip logging health check requests to reduce noise
+	}))
+
+	// Add security headers middleware
+	r.Use(middleware.SecurityHeaders())
+
+	// Add CORS middleware
+	r.Use(middleware.CORS())
+
+	// Create rate limiter
+	rateLimiter := middleware.DefaultRateLimiter()
+
+	// Apply rate limiting to all routes
+	r.Use(rateLimiter.Middleware())
+
+	// Public health check endpoint (with rate limiting but no authentication)
 	r.GET("/health", handlers.HealthCheck)
 
 	// Apply authentication middleware to all protected routes
@@ -45,12 +68,8 @@ func main() {
 	authedRoutes.PUT("/token", handlers.UpdateToken)
 
 	// Start server
-	port := os.Getenv("PORT") // Allow port to be set from environment
-	if port == "" {
-		port = "8080" // Default port if not specified
-	}
-	log.Printf("Starting server on port %s", port)
-	if err := r.Run(":" + port); err != nil {
+	log.Printf("Starting DHCP REST API server on port %s", config.AppConfig.Port)
+	if err := r.Run(":" + config.AppConfig.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
